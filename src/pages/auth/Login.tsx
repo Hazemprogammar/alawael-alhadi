@@ -14,6 +14,9 @@ export const Login: React.FC = () => {
   const [role, setRole] = useState<UserRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [stage, setStage] = useState<'primary' | 'intermediate' | 'secondary' | ''>('');
+  const [classLevel, setClassLevel] = useState('');
+  const [track, setTrack] = useState<'scientific' | 'literary' | ''>('');
   
   const { login, language } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +27,33 @@ export const Login: React.FC = () => {
     { value: 'institution', label: language === 'ar' ? 'مؤسسة تعليمية' : 'Institution', icon: BookOpen },
     { value: 'parent', label: language === 'ar' ? 'ولي أمر' : 'Parent', icon: User }
   ];
+
+  const stageOptions = [
+    { value: 'primary', label: language === 'ar' ? 'ابتدائي' : 'Primary' },
+    { value: 'intermediate', label: language === 'ar' ? 'متوسط' : 'Intermediate' },
+    { value: 'secondary', label: language === 'ar' ? 'ثانوي' : 'Secondary' },
+  ] as const;
+
+  const classesByStage: Record<'primary' | 'intermediate' | 'secondary', { value: string; label: string }[]> = {
+    primary: [
+      { value: '1', label: language === 'ar' ? 'الأول ابتدائي' : '1st Primary' },
+      { value: '2', label: language === 'ar' ? 'الثاني ابتدائي' : '2nd Primary' },
+      { value: '3', label: language === 'ar' ? 'الثالث ابتدائي' : '3rd Primary' },
+      { value: '4', label: language === 'ar' ? 'الرابع ابتدائي' : '4th Primary' },
+      { value: '5', label: language === 'ar' ? 'الخامس ابتدائي' : '5th Primary' },
+      { value: '6', label: language === 'ar' ? 'السادس ابتدائي' : '6th Primary' },
+    ],
+    intermediate: [
+      { value: '1', label: language === 'ar' ? 'الأول متوسط' : '1st Intermediate' },
+      { value: '2', label: language === 'ar' ? 'الثاني متوسط' : '2nd Intermediate' },
+      { value: '3', label: language === 'ar' ? 'الثالث متوسط' : '3rd Intermediate' },
+    ],
+    secondary: [
+      { value: '1', label: language === 'ar' ? 'الأول ثانوي' : '1st Secondary' },
+      { value: '2', label: language === 'ar' ? 'الثاني ثانوي' : '2nd Secondary' },
+      { value: '3', label: language === 'ar' ? 'الثالث ثانوي' : '3rd Secondary' },
+    ],
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +66,30 @@ export const Login: React.FC = () => {
       return;
     }
 
+    if (role === 'student') {
+      if (!stage || !classLevel || (stage === 'secondary' && classLevel === '3' && !track)) {
+        toast({
+          title: language === 'ar' ? 'مطلوب' : 'Required',
+          description:
+            language === 'ar'
+              ? 'يرجى تحديد المرحلة والصف' + (stage === 'secondary' && classLevel === '3' ? ' والمسار' : '')
+              : 'Please select stage and class' + (stage === 'secondary' && classLevel === '3' ? ' and track' : ''),
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
-      await login(email, password, role);
+      await login(
+        email,
+        password,
+        role,
+        role === 'student'
+          ? { stage: stage as 'primary' | 'intermediate' | 'secondary', classLevel, track: track || undefined }
+          : undefined
+      );
       toast({
         title: language === 'ar' ? 'مرحباً بك' : 'Welcome',
         description: language === 'ar' ? 'تم تسجيل الدخول بنجاح' : 'Login successful'
@@ -104,6 +155,90 @@ export const Login: React.FC = () => {
                   })}
                 </div>
               </div>
+
+              {role === 'student' && (
+                <div className="space-y-4">
+                  {/* Stage Selection */}
+                  <div className="space-y-3">
+                    <Label className="font-cairo font-medium text-foreground">
+                      {language === 'ar' ? 'المرحلة الدراسية' : 'Education Stage'}
+                    </Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {stageOptions.map((s) => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => {
+                            setStage(s.value);
+                            setClassLevel('');
+                            setTrack('');
+                          }}
+                          className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                            stage === s.value
+                              ? 'border-accent bg-accent/10 text-accent'
+                              : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <div className="text-sm font-medium">{s.label}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Class Selection */}
+                  {stage && (
+                    <div className="space-y-3">
+                      <Label className="font-cairo font-medium text-foreground">
+                        {language === 'ar' ? 'الصف' : 'Class'}
+                      </Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {classesByStage[stage as 'primary' | 'intermediate' | 'secondary'].map((cls) => (
+                          <button
+                            key={cls.value}
+                            type="button"
+                            onClick={() => {
+                              setClassLevel(cls.value);
+                              if (cls.value !== '3') setTrack('');
+                            }}
+                            className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                              classLevel === cls.value
+                                ? 'border-accent bg-accent/10 text-accent'
+                                : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">{cls.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Track Selection for 3rd Secondary */}
+                  {stage === 'secondary' && classLevel === '3' && (
+                    <div className="space-y-3">
+                      <Label className="font-cairo font-medium text-foreground">
+                        {language === 'ar' ? 'المسار' : 'Track'}
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[{ value: 'scientific', label: language === 'ar' ? 'علمي' : 'Scientific' }, { value: 'literary', label: language === 'ar' ? 'أدبي' : 'Literary' }].map((t) => (
+                          <button
+                            key={t.value}
+                            type="button"
+                            onClick={() => setTrack(t.value as 'scientific' | 'literary')}
+                            className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                              track === t.value
+                                ? 'border-accent bg-accent/10 text-accent'
+                                : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">{t.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Email */}
               <div className="space-y-2">

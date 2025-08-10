@@ -10,11 +10,14 @@ export interface User {
   avatar?: string;
   points?: number;
   institution?: string;
+  educationStage?: 'primary' | 'intermediate' | 'secondary';
+  classLevel?: string;
+  track?: 'scientific' | 'literary';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
+  login: (email: string, password: string, role: UserRole, education?: EducationInfo) => Promise<void>;
   logout: () => void;
   register: (userData: RegisterData) => Promise<void>;
   isLoading: boolean;
@@ -29,6 +32,12 @@ interface RegisterData {
   role: UserRole;
   institution?: string;
   phone?: string;
+}
+
+export interface EducationInfo {
+  stage: 'primary' | 'intermediate' | 'secondary';
+  classLevel: string;
+  track?: 'scientific' | 'literary';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (email: string, password: string, role: UserRole, education?: EducationInfo) => {
     setIsLoading(true);
     try {
       // Simulate API call
@@ -82,7 +91,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role,
         avatar: '/placeholder-avatar.jpg',
         points: role === 'student' ? 1250 : undefined,
-        institution: role === 'teacher' || role === 'student' ? 'جامعة الخرطوم' : undefined
+        institution: role === 'teacher' || role === 'student' ? 'جامعة الخرطوم' : undefined,
+        ...(role === 'student' && education ? {
+          educationStage: education.stage,
+          classLevel: education.classLevel,
+          track: education.track
+        } : {})
       };
       
       setUser(mockUser);

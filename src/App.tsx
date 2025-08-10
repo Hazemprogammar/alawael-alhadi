@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Navbar } from "./components/layout/Navbar";
-import { Landing } from "./pages/Landing";
+
 import { Login } from "./pages/auth/Login";
 import { Register } from "./pages/auth/Register";
 import { StudentDashboard } from "./pages/dashboard/StudentDashboard";
@@ -57,7 +57,7 @@ const AppRoutes = () => {
   return (
     <div className="min-h-screen bg-background">
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Navigate to="/auth/login" replace />} />
         <Route path="/auth/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
         <Route path="/auth/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
         <Route path="/dashboard" element={
