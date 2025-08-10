@@ -2,11 +2,103 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Navbar } from "./components/layout/Navbar";
+import { Landing } from "./pages/Landing";
+import { Login } from "./pages/auth/Login";
+import { Register } from "./pages/auth/Register";
+import { StudentDashboard } from "./pages/dashboard/StudentDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  return user ? <>{children}</> : <Navigate to="/auth/login" replace />;
+};
+
+// Dashboard Route Component
+const DashboardRoute = () => {
+  const { user } = useAuth();
+  
+  if (!user) return <Navigate to="/auth/login" replace />;
+  
+  // Route based on user role
+  switch (user.role) {
+    case 'student':
+      return <StudentDashboard />;
+    case 'teacher':
+      return <div className="p-8 text-center">Teacher Dashboard - Coming Soon</div>;
+    case 'institution':
+      return <div className="p-8 text-center">Institution Dashboard - Coming Soon</div>;
+    case 'parent':
+      return <div className="p-8 text-center">Parent Dashboard - Coming Soon</div>;
+    case 'admin':
+      return <div className="p-8 text-center">Admin Dashboard - Coming Soon</div>;
+    default:
+      return <Navigate to="/auth/login" replace />;
+  }
+};
+
+const AppRoutes = () => {
+  const { user } = useAuth();
+  
+  return (
+    <div className="min-h-screen bg-background">
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/auth/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/auth/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <div>
+              <Navbar />
+              <main className="container mx-auto px-4 py-8">
+                <DashboardRoute />
+              </main>
+            </div>
+          </ProtectedRoute>
+        } />
+        <Route path="/courses" element={
+          <div>
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              <div className="p-8 text-center">Courses - Coming Soon</div>
+            </main>
+          </div>
+        } />
+        <Route path="/exams" element={
+          <div>
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              <div className="p-8 text-center">Exams - Coming Soon</div>
+            </main>
+          </div>
+        } />
+        <Route path="/community" element={
+          <div>
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              <div className="p-8 text-center">Community - Coming Soon</div>
+            </main>
+          </div>
+        } />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,11 +106,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
