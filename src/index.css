@@ -229,3 +229,14 @@
     @apply ml-4;
   }
 }
+
+@layer utilities {
+  /* Custom shadow utilities using design tokens */
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-cultural { box-shadow: var(--shadow-cultural); }
+  .shadow-gold { box-shadow: var(--shadow-gold); }
+
+  /* State variants for hover to support @apply hover:shadow-* */
+  .hover\:shadow-cultural:hover { box-shadow: var(--shadow-cultural); }
+  .hover\:shadow-gold:hover { box-shadow: var(--shadow-gold); }
+}
