@@ -106,6 +106,20 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleReset = () => {
+    setEmail('');
+    setPassword('');
+    setRole('student');
+    setStage('');
+    setClassLevel('');
+    setTrack('');
+    setShowPassword(false);
+    toast({
+      title: language === 'ar' ? 'تم الإلغاء' : 'Cancelled',
+      description: language === 'ar' ? 'تم مسح البيانات المدخلة' : 'Cleared entered data'
+    });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center pattern-islamic bg-gradient-to-br from-card-elevated to-background p-4">
       <div className="w-full max-w-md">
@@ -308,6 +322,16 @@ export const Login: React.FC = () => {
                     {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
                   </>
                 )}
+              </Button>
+
+              {/* Cancel / Reset Button */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-2"
+                onClick={handleReset}
+              >
+                {language === 'ar' ? 'إلغاء وإفراغ الحقول' : 'Cancel & Clear'}
               </Button>
             </form>
 
