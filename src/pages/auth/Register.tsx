@@ -21,6 +21,9 @@ export const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [stage, setStage] = useState<'primary' | 'intermediate' | 'secondary' | ''>('');
+  const [classLevel, setClassLevel] = useState('');
+  const [track, setTrack] = useState<'scientific' | 'literary' | ''>('');
   
   const { register, language } = useAuth();
   const navigate = useNavigate();
@@ -31,6 +34,33 @@ export const Register: React.FC = () => {
     { value: 'institution', label: language === 'ar' ? 'مؤسسة تعليمية' : 'Institution', icon: School },
     { value: 'parent', label: language === 'ar' ? 'ولي أمر' : 'Parent', icon: Users }
   ];
+
+  const stageOptions = [
+    { value: 'primary', label: language === 'ar' ? 'ابتدائي' : 'Primary' },
+    { value: 'intermediate', label: language === 'ar' ? 'متوسط' : 'Intermediate' },
+    { value: 'secondary', label: language === 'ar' ? 'ثانوي' : 'Secondary' },
+  ] as const;
+
+  const classesByStage: Record<'primary' | 'intermediate' | 'secondary', { value: string; label: string }[]> = {
+    primary: [
+      { value: '1', label: language === 'ar' ? 'الأول ابتدائي' : '1st Primary' },
+      { value: '2', label: language === 'ar' ? 'الثاني ابتدائي' : '2nd Primary' },
+      { value: '3', label: language === 'ar' ? 'الثالث ابتدائي' : '3rd Primary' },
+      { value: '4', label: language === 'ar' ? 'الرابع ابتدائي' : '4th Primary' },
+      { value: '5', label: language === 'ar' ? 'الخامس ابتدائي' : '5th Primary' },
+      { value: '6', label: language === 'ar' ? 'السادس ابتدائي' : '6th Primary' },
+    ],
+    intermediate: [
+      { value: '1', label: language === 'ar' ? 'الأول متوسط' : '1st Intermediate' },
+      { value: '2', label: language === 'ar' ? 'الثاني متوسط' : '2nd Intermediate' },
+      { value: '3', label: language === 'ar' ? 'الثالث متوسط' : '3rd Intermediate' },
+    ],
+    secondary: [
+      { value: '1', label: language === 'ar' ? 'الأول ثانوي' : '1st Secondary' },
+      { value: '2', label: language === 'ar' ? 'الثاني ثانوي' : '2nd Secondary' },
+      { value: '3', label: language === 'ar' ? 'الثالث ثانوي' : '3rd Secondary' },
+    ],
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -68,7 +98,22 @@ export const Register: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await register(formData);
+      if (formData.role === 'student') {
+        if (!stage || !classLevel || (stage === 'secondary' && classLevel === '3' && !track)) {
+          toast({
+            title: language === 'ar' ? 'مطلوب' : 'Required',
+            description: language === 'ar' ? 'يرجى اختيار المرحلة والصف' + (stage === 'secondary' && classLevel === '3' ? ' والمسار' : '') : 'Please select stage and class' + (stage === 'secondary' && classLevel === '3' ? ' and track' : ''),
+            variant: 'destructive'
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      await register({
+        ...formData,
+        education: formData.role === 'student' ? { stage: stage as any, classLevel, track: track || undefined } : undefined,
+      });
       toast({
         title: language === 'ar' ? 'مرحباً بك' : 'Welcome',
         description: language === 'ar' ? 'تم إنشاء الحساب بنجاح' : 'Account created successfully'
@@ -106,36 +151,111 @@ export const Register: React.FC = () => {
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Role Selection */}
-              <div className="space-y-3">
-                <Label className="font-cairo font-medium text-foreground">
-                  {language === 'ar' ? 'نوع الحساب *' : 'Account Type *'}
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {roles.map((roleOption) => {
-                    const Icon = roleOption.icon;
-                    return (
-                      <button
-                        key={roleOption.value}
-                        type="button"
-                        onClick={() => handleChange('role', roleOption.value)}
-                        className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
-                          formData.role === roleOption.value
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border hover:border-accent text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        <Icon className="w-5 h-5 mx-auto mb-1" />
-                        <div className="text-sm font-medium">{roleOption.label}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Role Selection */}
+                  <div className="space-y-3">
+                    <Label className="font-cairo font-medium text-foreground">
+                      {language === 'ar' ? 'نوع الحساب *' : 'Account Type *'}
+                    </Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {roles.map((roleOption) => {
+                        const Icon = roleOption.icon;
+                        return (
+                          <button
+                            key={roleOption.value}
+                            type="button"
+                            onClick={() => handleChange('role', roleOption.value)}
+                            className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                              formData.role === roleOption.value
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border hover:border-accent text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5 mx-auto mb-1" />
+                            <div className="text-sm font-medium">{roleOption.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              {/* Name */}
+                  {/* Student Education Selection */}
+                  {formData.role === 'student' && (
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <Label className="font-cairo font-medium text-foreground">
+                          {language === 'ar' ? 'المرحلة الدراسية' : 'Education Stage'}
+                        </Label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {stageOptions.map((s) => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              onClick={() => { setStage(s.value); setClassLevel(''); setTrack(''); }}
+                              className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                                stage === s.value
+                                  ? 'border-accent bg-accent/10 text-accent'
+                                  : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <div className="text-sm font-medium">{s.label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {stage && (
+                        <div className="space-y-3">
+                          <Label className="font-cairo font-medium text-foreground">
+                            {language === 'ar' ? 'الصف' : 'Class'}
+                          </Label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {classesByStage[stage as 'primary' | 'intermediate' | 'secondary'].map((cls) => (
+                              <button
+                                key={cls.value}
+                                type="button"
+                                onClick={() => { setClassLevel(cls.value); if (cls.value !== '3') setTrack(''); }}
+                                className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                                  classLevel === cls.value
+                                    ? 'border-accent bg-accent/10 text-accent'
+                                    : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <div className="text-sm font-medium">{cls.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {stage === 'secondary' && classLevel === '3' && (
+                        <div className="space-y-3">
+                          <Label className="font-cairo font-medium text-foreground">
+                            {language === 'ar' ? 'المسار' : 'Track'}
+                          </Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {[{ value: 'scientific', label: language === 'ar' ? 'علمي' : 'Scientific' }, { value: 'literary', label: language === 'ar' ? 'أدبي' : 'Literary' }].map((t) => (
+                              <button
+                                key={t.value}
+                                type="button"
+                                onClick={() => setTrack(t.value as 'scientific' | 'literary')}
+                                className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                                  track === t.value
+                                    ? 'border-accent bg-accent/10 text-accent'
+                                    : 'border-border hover:border-primary text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <div className="text-sm font-medium">{t.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name" className="font-cairo font-medium text-foreground">
                   {language === 'ar' ? 'الاسم الكامل *' : 'Full Name *'}

@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string, role: UserRole, education?: EducationInfo) => Promise<void>;
   logout: () => void;
   register: (userData: RegisterData) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
   isLoading: boolean;
   language: 'ar' | 'en';
   toggleLanguage: () => void;
@@ -32,6 +33,7 @@ interface RegisterData {
   role: UserRole;
   institution?: string;
   phone?: string;
+  education?: EducationInfo; // for students
 }
 
 export interface EducationInfo {
@@ -121,7 +123,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: userData.email,
         role: userData.role,
         points: userData.role === 'student' ? 100 : undefined,
-        institution: userData.institution
+        institution: userData.institution,
+        ...(userData.role === 'student' && userData.education ? {
+          educationStage: userData.education.stage,
+          classLevel: userData.education.classLevel,
+          track: userData.education.track
+        } : {})
       };
       
       setUser(newUser);
@@ -140,6 +147,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const toggleLanguage = () => {
     setLanguage(prev => {
       const newLang = prev === 'ar' ? 'en' : 'ar';
@@ -154,6 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     register,
+    updateUser,
     isLoading,
     language,
     toggleLanguage

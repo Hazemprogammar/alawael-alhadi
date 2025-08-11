@@ -228,17 +228,9 @@ export const StudentDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'ميزة شراء النقاط سيتم تفعيلها قريباً' : 'Buy points will be available soon' })}>
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/buy-points')}>
                 <Coins className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'شراء النقاط' : 'Buy Points'}
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'قسم الشهادات سيتم فتحه قريباً' : 'Certificates section will open soon' })}>
-                <Award className="w-4 h-4 me-2" />
-                {language === 'ar' ? 'شهاداتي' : 'My Certificates'}
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'تقرير الأداء سيتم توفيره قريباً' : 'Performance report coming soon' })}>
-                <TrendingUp className="w-4 h-4 me-2" />
-                {language === 'ar' ? 'تقرير الأداء' : 'Performance Report'}
               </Button>
             </CardContent>
           </Card>

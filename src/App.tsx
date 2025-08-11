@@ -10,6 +10,8 @@ import { Login } from "./pages/auth/Login";
 import { Register } from "./pages/auth/Register";
 import { StudentDashboard } from "./pages/dashboard/StudentDashboard";
 import NotFound from "./pages/NotFound";
+import BuyPoints from "./pages/BuyPoints";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,14 @@ const AppRoutes = () => {
               <div className="p-8 text-center">Community - Coming Soon</div>
             </main>
           </div>
+        } />
+        <Route path="/buy-points" element={<BuyPoints />} />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <div>
+              <Profile />
+            </div>
+          </ProtectedRoute>
         } />
         <Route path="*" element={<NotFound />} />
       </Routes>

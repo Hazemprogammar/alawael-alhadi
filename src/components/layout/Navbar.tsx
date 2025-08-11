@@ -85,7 +85,7 @@ export const Navbar: React.FC = () => {
             {user ? (
               <div className="flex items-center space-x-4 rtl:space-x-reverse">
                 <Link
-                  to="/dashboard"
+                  to="/profile"
                   className="flex items-center space-x-2 rtl:space-x-reverse bg-card-elevated hover:bg-primary/10 px-3 py-2 rounded-lg transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
@@ -164,7 +164,7 @@ export const Navbar: React.FC = () => {
                 {user ? (
                   <div className="space-y-2">
                     <Link
-                      to="/dashboard"
+                      to="/profile"
                       className="flex items-center space-x-3 rtl:space-x-reverse bg-card-elevated px-3 py-2 rounded-lg"
                       onClick={() => setIsMenuOpen(false)}
                     >
