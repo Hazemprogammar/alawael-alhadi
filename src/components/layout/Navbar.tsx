@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, Globe, BookOpen, Users, Award } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
+import { toast } from '../../hooks/use-toast';
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,9 +12,12 @@ export const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    toast({
+      title: language === 'ar' ? 'تم تسجيل الخروج' : 'Logged out',
+      description: language === 'ar' ? 'تم إنهاء الجلسة بنجاح' : 'You have been signed out'
+    });
+    navigate('/auth/login');
   };
-
   const navItems = [
     { 
       href: '/courses', 

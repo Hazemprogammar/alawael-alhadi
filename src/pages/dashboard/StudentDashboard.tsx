@@ -4,9 +4,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Progress } from '../../components/ui/progress';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '../../hooks/use-toast';
 
 export const StudentDashboard: React.FC = () => {
   const { user, language } = useAuth();
+  const navigate = useNavigate();
 
   const stats = [
     {
@@ -167,14 +170,14 @@ export const StudentDashboard: React.FC = () => {
                     <p className="text-sm text-muted-foreground">
                       {course.nextLesson}
                     </p>
-                    <Button size="sm" variant="outline" className="text-xs">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
                       {language === 'ar' ? 'متابعة' : 'Continue'}
                     </Button>
                   </div>
                 </div>
               ))}
               
-              <Button className="btn-cultural w-full mt-4">
+              <Button className="btn-cultural w-full mt-4" onClick={() => navigate('/courses')}>
                 <BookOpen className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'عرض جميع الدورات' : 'View All Courses'}
               </Button>
@@ -210,7 +213,7 @@ export const StudentDashboard: React.FC = () => {
                 </div>
               ))}
               
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/exams')}>
                 <Target className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'جدول الامتحانات' : 'Exam Schedule'}
               </Button>
@@ -225,15 +228,15 @@ export const StudentDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'ميزة شراء النقاط سيتم تفعيلها قريباً' : 'Buy points will be available soon' })}>
                 <Coins className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'شراء النقاط' : 'Buy Points'}
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'قسم الشهادات سيتم فتحه قريباً' : 'Certificates section will open soon' })}>
                 <Award className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'شهاداتي' : 'My Certificates'}
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: language === 'ar' ? 'قريباً' : 'Coming soon', description: language === 'ar' ? 'تقرير الأداء سيتم توفيره قريباً' : 'Performance report coming soon' })}>
                 <TrendingUp className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'تقرير الأداء' : 'Performance Report'}
               </Button>
