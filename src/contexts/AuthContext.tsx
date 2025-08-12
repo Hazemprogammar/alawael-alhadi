@@ -10,6 +10,8 @@ export interface User {
   avatar?: string;
   points?: number;
   institution?: string;
+  phone?: string;
+  bio?: string;
   educationStage?: 'primary' | 'intermediate' | 'secondary';
   classLevel?: string;
   track?: 'scientific' | 'literary';
@@ -84,6 +86,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Simple local password check if a user exists locally
+      const storedUserStr = localStorage.getItem('user');
+      const storedPass = localStorage.getItem('auth_password');
+      if (storedUserStr) {
+        try {
+          const stored = JSON.parse(storedUserStr) as User;
+          if (stored.email === email && storedPass && storedPass !== password) {
+            throw new Error('كلمة المرور غير صحيحة');
+          }
+        } catch {}
+      }
       
       // Mock user data
       const mockUser: User = {
@@ -105,6 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('auth_token', 'mock_token_12345');
       localStorage.setItem('user', JSON.stringify(mockUser));
     } catch (error) {
+      if (error instanceof Error) throw error;
       throw new Error('فشل في تسجيل الدخول');
     } finally {
       setIsLoading(false);
@@ -124,6 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role: userData.role,
         points: userData.role === 'student' ? 100 : undefined,
         institution: userData.institution,
+        phone: userData.phone,
         ...(userData.role === 'student' && userData.education ? {
           educationStage: userData.education.stage,
           classLevel: userData.education.classLevel,
@@ -134,6 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(newUser);
       localStorage.setItem('auth_token', 'mock_token_12345');
       localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem('auth_password', userData.password);
     } catch (error) {
       throw new Error('فشل في إنشاء الحساب');
     } finally {

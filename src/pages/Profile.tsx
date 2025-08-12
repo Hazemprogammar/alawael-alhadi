@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '../hooks/use-toast';
@@ -12,6 +13,8 @@ const Profile: React.FC = () => {
   const { user, updateUser, language } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const [institution, setInstitution] = useState(user?.institution || '');
   const [stage, setStage] = useState(user?.educationStage || '');
   const [classLevel, setClassLevel] = useState(user?.classLevel || '');
@@ -46,19 +49,38 @@ const Profile: React.FC = () => {
   };
 
   const handleSave = () => {
-    updateUser({ name, email, institution, educationStage: stage as any, classLevel, track: (track || undefined) as any, avatar });
+    updateUser({ name, email, phone, bio, institution, educationStage: stage as any, classLevel, track: (track || undefined) as any, avatar });
     toast({
       title: language === 'ar' ? 'تم الحفظ' : 'Saved',
       description: language === 'ar' ? 'تم تحديث معلومات الملف الشخصي' : 'Profile information updated'
     });
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast({
-      title: language === 'ar' ? 'يتطلب تفعيل Supabase' : 'Supabase required',
-      description: language === 'ar' ? 'لتغيير كلمة المرور فعّل تكامل Supabase من أعلى اليمين' : 'Connect Supabase to enable password changes'
-    });
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const current = String(data.get('currentPassword') || '');
+    const next = String(data.get('newPassword') || '');
+    const confirm = String(data.get('confirmPassword') || '');
+    const stored = localStorage.getItem('auth_password') || '';
+
+    if (next.length < 6) {
+      toast({ title: language === 'ar' ? 'كلمة المرور قصيرة' : 'Password too short', description: language === 'ar' ? 'يجب أن تكون 6 أحرف على الأقل' : 'Must be at least 6 characters', variant: 'destructive' });
+      return;
+    }
+    if (next !== confirm) {
+      toast({ title: language === 'ar' ? 'غير متطابقة' : 'Mismatch', description: language === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    if (stored && current !== stored) {
+      toast({ title: language === 'ar' ? 'كلمة المرور الحالية غير صحيحة' : 'Current password incorrect', variant: 'destructive' });
+      return;
+    }
+
+    localStorage.setItem('auth_password', next);
+    toast({ title: language === 'ar' ? 'تم تحديث كلمة المرور' : 'Password updated' });
+    form.reset();
   };
 
   const isStudent = user?.role === 'student';
@@ -80,7 +102,7 @@ const Profile: React.FC = () => {
                 </Avatar>
                 <div>
                   <Label htmlFor="avatar" className="block mb-2">{language === 'ar' ? 'رفع صورة جديدة' : 'Upload new photo'}</Label>
-                  <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} />
+                  <Input id="avatar" name="avatar" type="file" accept="image/*" capture="user" onChange={handleAvatarChange} />
                 </div>
               </div>
             </CardContent>
@@ -101,8 +123,16 @@ const Profile: React.FC = () => {
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="phone">{language === 'ar' ? 'رقم الهاتف' : 'Phone'}</Label>
+                  <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="institution">{language === 'ar' ? 'المؤسسة التعليمية' : 'Institution'}</Label>
                   <Input id="institution" value={institution} onChange={(e) => setInstitution(e.target.value)} />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="bio">{language === 'ar' ? 'نبذة' : 'Bio'}</Label>
+                  <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder={language === 'ar' ? 'اكتب نبذة قصيرة عنك' : 'Write a short bio'} />
                 </div>
               </div>
 
@@ -168,15 +198,15 @@ const Profile: React.FC = () => {
             <form onSubmit={handlePasswordChange} className="grid md:grid-cols-3 gap-4 items-end">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">{language === 'ar' ? 'كلمة المرور الحالية' : 'Current Password'}</Label>
-                <Input id="currentPassword" type="password" required />
+                <Input id="currentPassword" name="currentPassword" type="password" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="newPassword">{language === 'ar' ? 'كلمة المرور الجديدة' : 'New Password'}</Label>
-                <Input id="newPassword" type="password" required />
+                <Input id="newPassword" name="newPassword" type="password" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">{language === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}</Label>
-                <Input id="confirmPassword" type="password" required />
+                <Input id="confirmPassword" name="confirmPassword" type="password" required />
               </div>
               <div className="md:col-span-3">
                 <Button type="submit" variant="outline" className="w-full">{language === 'ar' ? 'تحديث كلمة المرور' : 'Update Password'}</Button>

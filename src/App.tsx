@@ -9,6 +9,7 @@ import { Navbar } from "./components/layout/Navbar";
 import { Login } from "./pages/auth/Login";
 import { Register } from "./pages/auth/Register";
 import { StudentDashboard } from "./pages/dashboard/StudentDashboard";
+import TeacherDashboard from "./pages/dashboard/TeacherDashboard";
 import NotFound from "./pages/NotFound";
 import BuyPoints from "./pages/BuyPoints";
 import Profile from "./pages/Profile";
@@ -41,9 +42,9 @@ const DashboardRoute = () => {
     case 'student':
       return <StudentDashboard />;
     case 'teacher':
-      return <div className="p-8 text-center">Teacher Dashboard - Coming Soon</div>;
+      return <TeacherDashboard />;
     case 'institution':
-      return <div className="p-8 text-center">Institution Dashboard - Coming Soon</div>;
+      return <div className="p-8 text-center">تم إلغاء صفحة المؤسسة التعليمية</div>;
     case 'parent':
       return <div className="p-8 text-center">Parent Dashboard - Coming Soon</div>;
     case 'admin':
