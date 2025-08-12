@@ -13,6 +13,7 @@ import TeacherDashboard from "./pages/dashboard/TeacherDashboard";
 import NotFound from "./pages/NotFound";
 import BuyPoints from "./pages/BuyPoints";
 import Profile from "./pages/Profile";
+import Courses from "./pages/Courses";
 
 const queryClient = new QueryClient();
 
@@ -73,14 +74,7 @@ const AppRoutes = () => {
             </div>
           </ProtectedRoute>
         } />
-        <Route path="/courses" element={
-          <div>
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <div className="p-8 text-center">Courses - Coming Soon</div>
-            </main>
-          </div>
-        } />
+        <Route path="/courses" element={<Courses />} />
         <Route path="/exams" element={
           <div>
             <Navbar />
