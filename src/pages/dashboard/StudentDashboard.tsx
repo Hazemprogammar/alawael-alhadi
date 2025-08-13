@@ -11,22 +11,35 @@ export const StudentDashboard: React.FC = () => {
   const { user, language } = useAuth();
   const navigate = useNavigate();
   type TeacherCourse = { id: string; title: string };
+  type Homework = { id: string; courseId: string; title: string; dueAt: string };
+  type HomeworkSubmission = { homeworkId: string; studentId: string; submittedAt: string };
   const [enrolledIds, setEnrolledIds] = React.useState<string[]>([]);
   const [courses, setCourses] = React.useState<TeacherCourse[]>([]);
+  const [homeworks, setHomeworks] = React.useState<Homework[]>([]);
+  const [submissions, setSubmissions] = React.useState<HomeworkSubmission[]>([]);
   React.useEffect(() => {
     try {
       const all = JSON.parse(localStorage.getItem('teacher_courses') || '[]') as TeacherCourse[];
       setCourses(Array.isArray(all) ? all : []);
+      const h = JSON.parse(localStorage.getItem('teacher_homeworks') || '[]') as Homework[];
+      setHomeworks(Array.isArray(h) ? h : []);
+      const s = JSON.parse(localStorage.getItem('homework_submissions') || '[]') as HomeworkSubmission[];
+      setSubmissions(Array.isArray(s) ? s : []);
       if (user?.id) {
         const ids = JSON.parse(localStorage.getItem(`enrollments:${user.id}`) || '[]') as string[];
         setEnrolledIds(Array.isArray(ids) ? ids : []);
       }
     } catch {
       setCourses([]);
+      setHomeworks([]);
+      setSubmissions([]);
       setEnrolledIds([]);
     }
   }, [user]);
   const enrolledCourses = React.useMemo(() => courses.filter(c => enrolledIds.includes(c.id)), [courses, enrolledIds]);
+  const assignedHomeworks = React.useMemo(() => homeworks.filter(h => enrolledIds.includes(h.courseId)), [homeworks, enrolledIds]);
+  const mySub = (hwId: string) => submissions.find(s => s.homeworkId === hwId && s.studentId === (user?.id || ''));
+
   const stats = [
     {
       title: language === 'ar' ? 'النقاط الحالية' : 'Current Points',
@@ -192,6 +205,47 @@ export const StudentDashboard: React.FC = () => {
                 <BookOpen className="w-4 h-4 me-2" />
                 {language === 'ar' ? 'عرض جميع الدورات' : 'View All Courses'}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="card-elevated mt-6">
+            <CardHeader>
+              <CardTitle className="font-tajawal text-xl text-secondary flex items-center">
+                <Award className="w-5 h-5 me-2" />
+                {language === 'ar' ? 'الواجبات المعيّنة' : 'Assigned Homeworks'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {assignedHomeworks.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  {language === 'ar' ? 'لا توجد واجبات حالياً.' : 'No homeworks right now.'}
+                </div>
+              ) : (
+                assignedHomeworks.map((hw) => {
+                  const due = new Date(hw.dueAt);
+                  const sub = mySub(hw.id);
+                  const overdue = !sub && new Date() > due;
+                  return (
+                    <div key={hw.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-tajawal font-semibold text-foreground mb-1">
+                            {hw.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {language === 'ar' ? 'الاستحقاق: ' : 'Due: '} {due.toLocaleString()} · {sub ? (language === 'ar' ? 'تم التسليم' : 'Submitted') : overdue ? (language === 'ar' ? 'متأخر' : 'Overdue') : (language === 'ar' ? 'لم يُسلّم' : 'Not submitted')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
+                          {language === 'ar' ? 'تسليم الواجب' : 'Submit on Courses'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </div>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { BookOpen, Award, Link as LinkIcon, Timer, Coins } from 'lucide-react';
+import { BookOpen, Award, Link as LinkIcon, Timer, Coins, FileText } from 'lucide-react';
 
 // Local types to mirror TeacherDashboard storage
 type FileResource = {
@@ -48,13 +48,37 @@ type TeacherExam = {
   createdAt: string;
 };
 
+type Homework = {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  dueAt: string;
+  createdAt: string;
+};
+
+type HomeworkSubmission = {
+  homeworkId: string;
+  studentId: string;
+  studentName: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  dataUrl: string;
+  submittedAt: string;
+};
+
 const COURSES_KEY = 'teacher_courses';
 const EXAMS_KEY = 'teacher_exams';
+const HOMEWORKS_KEY = 'teacher_homeworks';
+const SUBMISSIONS_KEY = 'homework_submissions';
 
 const Courses: React.FC = () => {
   const { user, language } = useAuth();
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [exams, setExams] = useState<TeacherExam[]>([]);
+  const [homeworks, setHomeworks] = useState<Homework[]>([]);
+  const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
 
   useEffect(() => {
     document.title = language === 'ar' ? 'الدورات والامتحانات | الأوائل' : 'Courses & Exams | Al-Awael';
@@ -73,11 +97,17 @@ const Courses: React.FC = () => {
     try {
       const c = JSON.parse(localStorage.getItem(COURSES_KEY) || '[]') as TeacherCourse[];
       const e = JSON.parse(localStorage.getItem(EXAMS_KEY) || '[]') as TeacherExam[];
+      const h = JSON.parse(localStorage.getItem(HOMEWORKS_KEY) || '[]') as Homework[];
+      const s = JSON.parse(localStorage.getItem(SUBMISSIONS_KEY) || '[]') as HomeworkSubmission[];
       setCourses(Array.isArray(c) ? c : []);
       setExams(Array.isArray(e) ? e : []);
+      setHomeworks(Array.isArray(h) ? h : []);
+      setSubmissions(Array.isArray(s) ? s : []);
     } catch {
       setCourses([]);
       setExams([]);
+      setHomeworks([]);
+      setSubmissions([]);
     }
   }, []);
 
@@ -113,6 +143,64 @@ const Courses: React.FC = () => {
     }
     return map;
   }, [exams]);
+
+  const homeworksByCourse = useMemo(() => {
+    const map: Record<string, Homework[]> = {};
+    for (const hw of homeworks) {
+      const key = hw.courseId || '__unlinked__';
+      if (!map[key]) map[key] = [];
+      map[key].push(hw);
+    }
+    return map;
+  }, [homeworks]);
+
+  const getMySubmission = (homeworkId: string) => submissions.find(s => s.homeworkId === homeworkId && s.studentId === (user?.id || ''));
+
+  const MAX_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_MIMES = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  ]);
+
+  const handleHomeworkUpload = async (homework: Homework, fileList: FileList | null) => {
+    if (!user || user.role !== 'student') { toast({ title: t('سجّل دخولك كطالب', 'Login as a student') }); return; }
+    if (!fileList || fileList.length === 0) return;
+    const file = fileList[0];
+    if (!ALLOWED_MIMES.has(file.type)) { toast({ title: t('نوع الملف غير مسموح', 'File type not allowed'), variant: 'destructive' }); return; }
+    if (file.size > MAX_SIZE) { toast({ title: t('الملف كبير جداً (10MB كحد أقصى)', 'File too large (max 10MB)'), variant: 'destructive' }); return; }
+
+    const now = new Date();
+    const due = new Date(homework.dueAt);
+    if (now > due) { toast({ title: t('انتهى موعد التسليم', 'Due date passed'), variant: 'destructive' }); return; }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const existingIdx = submissions.findIndex(s => s.homeworkId === homework.id && s.studentId === user.id);
+    const newSubmission: HomeworkSubmission = {
+      homeworkId: homework.id,
+      studentId: user.id,
+      studentName: user.name,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      dataUrl,
+      submittedAt: new Date().toISOString(),
+    };
+
+    let next = [...submissions];
+    if (existingIdx >= 0) next[existingIdx] = newSubmission; else next.unshift(newSubmission);
+    setSubmissions(next);
+    localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(next));
+    toast({ title: t('تم تسليم الواجب', 'Homework submitted') });
+  };
 
   const t = (ar: string, en: string) => (language === 'ar' ? ar : en);
 
@@ -235,6 +323,54 @@ const Courses: React.FC = () => {
                           ))}
                         </ul>
                       )}
+                    </div>
+
+                    <Separator className="my-4" />
+
+                    <div>
+                      <div className="font-medium mb-2 flex items-center">
+                        <FileText className="w-4 h-4 me-2" />
+                        {t('الواجبات', 'Homeworks')}
+                      </div>
+                      {(() => {
+                        const list = homeworksByCourse[course.id] || [];
+                        if (list.length === 0) return (
+                          <p className="text-sm text-muted-foreground">{t('لا توجد واجبات لهذه الدورة بعد.', 'No homeworks for this course yet.')}</p>
+                        );
+                        return (
+                          <ul className="space-y-3">
+                            {list.map((hw) => {
+                              const sub = getMySubmission(hw.id);
+                              const due = new Date(hw.dueAt);
+                              const overdue = new Date() > due;
+                              return (
+                                <li key={hw.id} className="border border-border rounded-lg p-3">
+                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                    <div>
+                                      <div className="font-medium">{hw.title}</div>
+                                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-3">
+                                        <span>{t('الاستحقاق:', 'Due:')} {due.toLocaleString()}</span>
+                                        <span>{sub ? t('تم التسليم', 'Submitted') : overdue ? t('متأخر', 'Overdue') : t('لم يُسلّم', 'Not submitted')}</span>
+                                      </div>
+                                    </div>
+                                    {user?.role === 'student' && enrolledIds.includes(course.id) && (
+                                      <div className="flex items-center gap-2">
+                                        <Input type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => handleHomeworkUpload(hw, e.target.files)} />
+                                      </div>
+                                    )}
+                                  </div>
+                                  {sub && (
+                                    <div className="text-xs text-muted-foreground mt-2">
+                                      {t('آخر تسليم:', 'Last submission:')} {new Date(sub.submittedAt).toLocaleString()} — {sub.fileName}
+                                      {' '}· <a className="text-accent underline" href={sub.dataUrl} download={sub.fileName} target="_blank" rel="noreferrer">{t('عرض/تنزيل', 'View/Download')}</a>
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

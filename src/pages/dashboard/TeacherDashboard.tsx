@@ -9,11 +9,20 @@ import { toast } from '@/hooks/use-toast';
 import { BookOpen, Plus, Trash2, FileText, Link as LinkIcon, Timer, Settings, LayoutList } from 'lucide-react';
 
 // Local types (mock persistence)
+export type FileResource = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string; // stored as Data URL for local-only persistence
+};
+
 export type TeacherCourse = {
   id: string;
   title: string;
   description?: string;
   resources: { title: string; url: string }[];
+  files?: FileResource[];
   createdAt: string;
 };
 
@@ -40,8 +49,30 @@ export type TeacherExam = {
   createdAt: string;
 };
 
+export type Homework = {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  dueAt: string; // ISO
+  createdAt: string;
+};
+
+export type HomeworkSubmission = {
+  homeworkId: string;
+  studentId: string;
+  studentName: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  dataUrl: string;
+  submittedAt: string;
+};
+
 const COURSES_KEY = 'teacher_courses';
 const EXAMS_KEY = 'teacher_exams';
+const HOMEWORKS_KEY = 'teacher_homeworks';
+const SUBMISSIONS_KEY = 'homework_submissions';
 
 function useLocalArray<T>(key: string, initial: T[] = []) {
   const [list, setList] = useState<T[]>(() => {
@@ -64,6 +95,8 @@ export const TeacherDashboard: React.FC = () => {
   const { user, language } = useAuth();
   const [courses, setCourses] = useLocalArray<TeacherCourse>(COURSES_KEY, []);
   const [exams, setExams] = useLocalArray<TeacherExam>(EXAMS_KEY, []);
+  const [homeworks, setHomeworks] = useLocalArray<Homework>(HOMEWORKS_KEY, []);
+  const [submissions, setSubmissions] = useLocalArray<HomeworkSubmission>(SUBMISSIONS_KEY, []);
 
   // SEO
   useEffect(() => {
@@ -83,6 +116,7 @@ export const TeacherDashboard: React.FC = () => {
   const [resourceTitle, setResourceTitle] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
   const [resources, setResources] = useState<{ title: string; url: string }[]>([]);
+  const [courseFiles, setCourseFiles] = useState<FileResource[]>([]);
 
   const addResource = () => {
     if (!resourceTitle || !resourceUrl) return;
@@ -93,6 +127,34 @@ export const TeacherDashboard: React.FC = () => {
 
   const removeResource = (idx: number) => {
     setResources(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleCourseFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const allowed = new Set([
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ]);
+    const max = 10 * 1024 * 1024; // 10MB
+    const toAdd: FileResource[] = [];
+    for (const f of Array.from(files)) {
+      if (!allowed.has(f.type) || f.size > max) continue;
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+      toAdd.push({ id: crypto.randomUUID(), name: f.name, type: f.type, size: f.size, dataUrl });
+    }
+    setCourseFiles((prev) => [...prev, ...toAdd]);
+  };
+
+  const removeCourseFile = (id: string) => {
+    setCourseFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const saveCourse = () => {
@@ -108,12 +170,14 @@ export const TeacherDashboard: React.FC = () => {
       title: courseTitle.trim(),
       description: courseDesc.trim() || undefined,
       resources,
+      files: courseFiles,
       createdAt: new Date().toISOString(),
     };
     setCourses(prev => [newCourse, ...prev]);
     setCourseTitle('');
     setCourseDesc('');
     setResources([]);
+    setCourseFiles([]);
     toast({ title: language === 'ar' ? 'تم إنشاء الدورة' : 'Course created' });
   };
 
@@ -199,6 +263,35 @@ export const TeacherDashboard: React.FC = () => {
     toast({ title: language === 'ar' ? 'تم إنشاء الامتحان' : 'Exam created' });
   };
 
+  // ----- Homework -----
+  const [hwTitle, setHwTitle] = useState('');
+  const [hwCourseId, setHwCourseId] = useState('');
+  const [hwDue, setHwDue] = useState<string>('');
+  const [hwDesc, setHwDesc] = useState('');
+
+  const saveHomework = () => {
+    if (!hwCourseId) { toast({ title: t('اختر دورة', 'Select a course'), variant: 'destructive' }); return; }
+    if (!hwTitle.trim()) { toast({ title: t('عنوان الواجب مطلوب', 'Homework title required'), variant: 'destructive' }); return; }
+    if (!hwDue) { toast({ title: t('تاريخ الاستحقاق مطلوب', 'Due date required'), variant: 'destructive' }); return; }
+    const newHw: Homework = {
+      id: crypto.randomUUID(),
+      courseId: hwCourseId,
+      title: hwTitle.trim(),
+      description: hwDesc.trim() || undefined,
+      dueAt: new Date(hwDue).toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    setHomeworks(prev => [newHw, ...prev]);
+    setHwTitle(''); setHwCourseId(''); setHwDue(''); setHwDesc('');
+    toast({ title: t('تم إنشاء الواجب', 'Homework created') });
+  };
+
+  const deleteHomework = (id: string) => {
+    setHomeworks(prev => prev.filter(h => h.id !== id));
+    setSubmissions(prev => prev.filter(s => s.homeworkId !== id));
+    toast({ title: t('تم حذف الواجب', 'Homework deleted') });
+  };
+
   const deleteCourse = (id: string) => {
     setCourses(prev => prev.filter(c => c.id !== id));
     toast({ title: language === 'ar' ? 'تم حذف الدورة' : 'Course deleted' });
@@ -250,6 +343,26 @@ export const TeacherDashboard: React.FC = () => {
                       <a href={r.url} target="_blank" rel="noreferrer" className="text-accent underline">{r.url}</a>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => removeResource(idx)}><Trash2 className="w-4 h-4" /></Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Course files (phone upload) */}
+          <div className="space-y-3 mt-4">
+            <Label className="font-medium flex items-center"><FileText className="w-4 h-4 me-2" />{t('ملفات الدورة (PDF/DOC/PPT) - حتى 10MB', 'Course Files (PDF/DOC/PPT) - up to 10MB')}</Label>
+            <Input type="file" multiple accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => handleCourseFilesSelected(e.target.files)} />
+            {courseFiles.length > 0 && (
+              <ul className="space-y-2">
+                {courseFiles.map((f) => (
+                  <li key={f.id} className="flex items-center justify-between border border-border rounded-lg p-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="w-4 h-4" />
+                      <span className="font-medium">{f.name}</span>
+                      <span className="text-xs text-muted-foreground">{(f.size/1024/1024).toFixed(2)}MB</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeCourseFile(f.id)}><Trash2 className="w-4 h-4" /></Button>
                   </li>
                 ))}
               </ul>
@@ -368,6 +481,80 @@ export const TeacherDashboard: React.FC = () => {
           <div className="flex justify-end">
             <Button onClick={saveExam} className="btn-cultural"><Plus className="w-4 h-4 me-1" />{t('حفظ الامتحان', 'Save Exam')}</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Create Homework */}
+      <Card className="card-cultural">
+        <CardHeader>
+          <CardTitle className="font-tajawal text-xl">{t('إنشاء واجب', 'Create Homework')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>{t('الدورة', 'Course')}</Label>
+              <select className="w-full rounded-md border border-border bg-background px-3 py-2" value={hwCourseId} onChange={(e) => setHwCourseId(e.target.value)}>
+                <option value="">{t('اختر دورة', 'Select course')}</option>
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('عنوان الواجب', 'Homework title')}</Label>
+              <Input value={hwTitle} onChange={(e) => setHwTitle(e.target.value)} placeholder={t('مثال: واجب الوحدة 1', 'e.g., Unit 1 Homework')} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('تاريخ الاستحقاق', 'Due date')}</Label>
+              <input type="datetime-local" className="w-full rounded-md border border-border bg-background px-3 py-2" value={hwDue} onChange={(e) => setHwDue(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{t('وصف (اختياري)', 'Description (optional)')}</Label>
+            <Textarea value={hwDesc} onChange={(e) => setHwDesc(e.target.value)} placeholder={t('تعليمات الواجب...', 'Homework instructions...')} />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={saveHomework} className="btn-cultural"><Plus className="w-4 h-4 me-1" />{t('حفظ الواجب', 'Save Homework')}</Button>
+          </div>
+
+          {/* Existing Homeworks */}
+          {homeworks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('لا توجد واجبات بعد.', 'No homeworks yet.')}</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="font-medium">{t('الواجبات الحالية', 'Current Homeworks')}</div>
+              {homeworks.map((h) => {
+                const courseTitle = courses.find(c => c.id === h.courseId)?.title || '-';
+                const subs = submissions.filter(s => s.homeworkId === h.id);
+                return (
+                  <div key={h.id} className="border border-border rounded-xl p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium">{h.title}</div>
+                        <div className="text-xs text-muted-foreground">{t('الدورة', 'Course')}: {courseTitle} · {t('الاستحقاق', 'Due')}: {new Date(h.dueAt).toLocaleString()}</div>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deleteHomework(h.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                    {subs.length > 0 ? (
+                      <div className="mt-3">
+                        <div className="text-sm font-medium mb-2">{t('التسليمات', 'Submissions')} ({subs.length})</div>
+                        <ul className="space-y-1 text-sm">
+                          {subs.map((s, i) => (
+                            <li key={i} className="flex items-center justify-between">
+                              <span>{s.studentName} — {s.fileName}</span>
+                              <a className="text-accent underline" href={s.dataUrl} download={s.fileName} target="_blank" rel="noreferrer">{t('تنزيل', 'Download')}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="mt-3 text-sm text-muted-foreground">{t('لا توجد تسليمات بعد.', 'No submissions yet.')}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
