@@ -3,14 +3,30 @@ import { BookOpen, Award, Calendar, Coins, TrendingUp, Clock, Star, Target } fro
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Progress } from '../../components/ui/progress';
+
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../../hooks/use-toast';
 
 export const StudentDashboard: React.FC = () => {
   const { user, language } = useAuth();
   const navigate = useNavigate();
-
+  type TeacherCourse = { id: string; title: string };
+  const [enrolledIds, setEnrolledIds] = React.useState<string[]>([]);
+  const [courses, setCourses] = React.useState<TeacherCourse[]>([]);
+  React.useEffect(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem('teacher_courses') || '[]') as TeacherCourse[];
+      setCourses(Array.isArray(all) ? all : []);
+      if (user?.id) {
+        const ids = JSON.parse(localStorage.getItem(`enrollments:${user.id}`) || '[]') as string[];
+        setEnrolledIds(Array.isArray(ids) ? ids : []);
+      }
+    } catch {
+      setCourses([]);
+      setEnrolledIds([]);
+    }
+  }, [user]);
+  const enrolledCourses = React.useMemo(() => courses.filter(c => enrolledIds.includes(c.id)), [courses, enrolledIds]);
   const stats = [
     {
       title: language === 'ar' ? 'النقاط الحالية' : 'Current Points',
@@ -21,7 +37,7 @@ export const StudentDashboard: React.FC = () => {
     },
     {
       title: language === 'ar' ? 'الدورات المسجلة' : 'Enrolled Courses',
-      value: '8',
+      value: String(enrolledCourses.length),
       icon: BookOpen,
       color: 'primary',
       trend: '+2'
@@ -146,36 +162,31 @@ export const StudentDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentCourses.map((course, index) => (
-                <div key={index} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-tajawal font-semibold text-foreground mb-1">
-                        {course.title}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {course.instructor}
-                      </p>
-                    </div>
-                    <div className="text-end">
-                      <div className="text-sm font-medium text-accent">
-                        {course.progress}%
+              {enrolledCourses.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  {language === 'ar' ? 'لم تسجل في أي دورة بعد.' : 'You have not enrolled in any courses yet.'}
+                </div>
+              ) : (
+                enrolledCourses.map((course) => (
+                  <div key={course.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-tajawal font-semibold text-foreground mb-1">
+                          {course.title}
+                        </h4>
                       </div>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {language === 'ar' ? 'دورة مسجلة' : 'Enrolled course'}
+                      </p>
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
+                        {language === 'ar' ? 'عرض' : 'View'}
+                      </Button>
+                    </div>
                   </div>
-                  
-                  <Progress value={course.progress} className="mb-3 h-2" />
-                  
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      {course.nextLesson}
-                    </p>
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
-                      {language === 'ar' ? 'متابعة' : 'Continue'}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
               
               <Button className="btn-cultural w-full mt-4" onClick={() => navigate('/courses')}>
                 <BookOpen className="w-4 h-4 me-2" />

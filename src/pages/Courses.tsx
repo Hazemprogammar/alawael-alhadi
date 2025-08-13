@@ -4,14 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 import { BookOpen, Award, Link as LinkIcon, Timer, Coins } from 'lucide-react';
 
 // Local types to mirror TeacherDashboard storage
+type FileResource = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+};
+
 type TeacherCourse = {
   id: string;
   title: string;
   description?: string;
   resources: { title: string; url: string }[];
+  files?: FileResource[];
   createdAt: string;
 };
 
@@ -42,7 +52,7 @@ const COURSES_KEY = 'teacher_courses';
 const EXAMS_KEY = 'teacher_exams';
 
 const Courses: React.FC = () => {
-  const { language } = useAuth();
+  const { user, language } = useAuth();
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [exams, setExams] = useState<TeacherExam[]>([]);
 
@@ -70,6 +80,29 @@ const Courses: React.FC = () => {
       setExams([]);
     }
   }, []);
+
+  // Enrollments per student
+  const [enrollBump, setEnrollBump] = useState(0);
+  const enrolledIds = useMemo(() => {
+    if (!user) return [] as string[];
+    try {
+      const ids = JSON.parse(localStorage.getItem(`enrollments:${user.id}`) || '[]') as string[];
+      return Array.isArray(ids) ? ids : [];
+    } catch {
+      return [] as string[];
+    }
+  }, [user, courses, enrollBump]);
+
+  const toggleEnroll = (courseId: string) => {
+    if (!user) return;
+    const key = `enrollments:${user.id}`;
+    const next = enrolledIds.includes(courseId)
+      ? enrolledIds.filter((id) => id !== courseId)
+      : [...enrolledIds, courseId];
+    localStorage.setItem(key, JSON.stringify(next));
+    toast({ title: language === 'ar' ? (enrolledIds.includes(courseId) ? 'تم إلغاء التسجيل' : 'تم التسجيل') : (enrolledIds.includes(courseId) ? 'Unenrolled' : 'Enrolled') });
+    setEnrollBump((v) => v + 1);
+  };
 
   const examsByCourse = useMemo(() => {
     const map: Record<string, TeacherExam[]> = {};
@@ -108,32 +141,58 @@ const Courses: React.FC = () => {
               const linkedExams = examsByCourse[course.id] || [];
               return (
                 <Card key={course.id} className="card-cultural">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="font-tajawal text-xl flex items-center">
                       <BookOpen className="w-5 h-5 me-2" /> {course.title}
                     </CardTitle>
+                    {user?.role === 'student' && (
+                      <Button size="sm" variant={enrolledIds.includes(course.id) ? 'secondary' : 'default'} onClick={() => toggleEnroll(course.id)}>
+                        {enrolledIds.includes(course.id) ? t('مسجل', 'Enrolled') : t('سجل الآن', 'Enroll')}
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {course.description && (
                       <p className="text-sm text-muted-foreground">{course.description}</p>
                     )}
 
-                    {course.resources?.length > 0 && (
+                    {(course.resources?.length || course.files?.length) ? (
                       <div>
-                        <div className="font-medium mb-2">{t('مصادر الدورة', 'Course Resources')}</div>
-                        <ul className="space-y-2">
-                          {course.resources.map((r, i) => (
-                            <li key={i} className="flex items-center gap-2 text-sm">
-                              <LinkIcon className="w-4 h-4" />
-                              <span className="font-medium">{r.title}</span>
-                              <a className="text-accent underline" href={r.url} target="_blank" rel="noreferrer">
-                                {r.url}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
+                        {course.resources?.length ? (
+                          <div>
+                            <div className="font-medium mb-2">{t('مصادر الدورة', 'Course Resources')}</div>
+                            <ul className="space-y-2">
+                              {course.resources.map((r, i) => (
+                                <li key={i} className="flex items-center gap-2 text-sm">
+                                  <LinkIcon className="w-4 h-4" />
+                                  <span className="font-medium">{r.title}</span>
+                                  <a className="text-accent underline" href={r.url} target="_blank" rel="noreferrer">
+                                    {r.url}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {course.files?.length ? (
+                          <div className="mt-4">
+                            <div className="font-medium mb-2">{t('ملفات الدورة', 'Course Files')}</div>
+                            <ul className="space-y-2">
+                              {course.files.map((f) => (
+                                <li key={f.id} className="flex items-center gap-2 text-sm">
+                                  <LinkIcon className="w-4 h-4" />
+                                  <span className="font-medium">{f.name}</span>
+                                  <a className="text-accent underline" href={f.dataUrl} download={f.name} target="_blank" rel="noreferrer">
+                                    {t('تنزيل/فتح', 'Open/Download')}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
-                    )}
+                    ) : null}
 
                     <Separator className="my-2" />
 

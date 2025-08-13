@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, Globe, BookOpen, Users, Award } from 'lucide-react';
+import { Menu, X, User, LogOut, Globe, BookOpen, Users, Award, LayoutDashboard, Coins } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { toast } from '../../hooks/use-toast';
@@ -20,6 +20,11 @@ export const Navbar: React.FC = () => {
   };
   const navItems = [
     { 
+      href: '/dashboard', 
+      label: language === 'ar' ? 'لوحة التحكم' : 'Dashboard',
+      icon: LayoutDashboard 
+    },
+    { 
       href: '/courses', 
       label: language === 'ar' ? 'الدورات' : 'Courses',
       icon: BookOpen 
@@ -33,6 +38,11 @@ export const Navbar: React.FC = () => {
       href: '/community', 
       label: language === 'ar' ? 'المجتمع' : 'Community',
       icon: Users 
+    },
+    { 
+      href: '/buy-points', 
+      label: language === 'ar' ? 'شراء النقاط' : 'Buy Points',
+      icon: Coins 
     }
   ];
 
