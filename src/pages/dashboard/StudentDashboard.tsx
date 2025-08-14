@@ -10,35 +10,20 @@ import { toast } from '../../hooks/use-toast';
 export const StudentDashboard: React.FC = () => {
   const { user, language } = useAuth();
   const navigate = useNavigate();
-  type TeacherCourse = { id: string; title: string };
-  type Homework = { id: string; courseId: string; title: string; dueAt: string };
-  type HomeworkSubmission = { homeworkId: string; studentId: string; submittedAt: string };
-  const [enrolledIds, setEnrolledIds] = React.useState<string[]>([]);
-  const [courses, setCourses] = React.useState<TeacherCourse[]>([]);
-  const [homeworks, setHomeworks] = React.useState<Homework[]>([]);
-  const [submissions, setSubmissions] = React.useState<HomeworkSubmission[]>([]);
-  React.useEffect(() => {
-    try {
-      const all = JSON.parse(localStorage.getItem('teacher_courses') || '[]') as TeacherCourse[];
-      setCourses(Array.isArray(all) ? all : []);
-      const h = JSON.parse(localStorage.getItem('teacher_homeworks') || '[]') as Homework[];
-      setHomeworks(Array.isArray(h) ? h : []);
-      const s = JSON.parse(localStorage.getItem('homework_submissions') || '[]') as HomeworkSubmission[];
-      setSubmissions(Array.isArray(s) ? s : []);
-      if (user?.id) {
-        const ids = JSON.parse(localStorage.getItem(`enrollments:${user.id}`) || '[]') as string[];
-        setEnrolledIds(Array.isArray(ids) ? ids : []);
-      }
-    } catch {
-      setCourses([]);
-      setHomeworks([]);
-      setSubmissions([]);
-      setEnrolledIds([]);
-    }
-  }, [user]);
-  const enrolledCourses = React.useMemo(() => courses.filter(c => enrolledIds.includes(c.id)), [courses, enrolledIds]);
-  const assignedHomeworks = React.useMemo(() => homeworks.filter(h => enrolledIds.includes(h.courseId)), [homeworks, enrolledIds]);
-  const mySub = (hwId: string) => submissions.find(s => s.homeworkId === hwId && s.studentId === (user?.id || ''));
+  // Student-specific types and data (independent from teachers)
+  type StudentCourse = { id: string; title: string; instructor: string; progress: number };
+  type StudentAssignment = { id: string; title: string; subject: string; dueDate: string; status: 'pending' | 'submitted' | 'graded' };
+  
+  const [studentCourses] = React.useState<StudentCourse[]>([
+    { id: '1', title: language === 'ar' ? 'حساب التفاضل والتكامل' : 'Calculus', instructor: language === 'ar' ? 'د. أحمد محمد' : 'Dr. Ahmed Mohamed', progress: 75 },
+    { id: '2', title: language === 'ar' ? 'الفيزياء الحديثة' : 'Modern Physics', instructor: language === 'ar' ? 'د. فاطمة علي' : 'Dr. Fatima Ali', progress: 60 },
+    { id: '3', title: language === 'ar' ? 'الكيمياء العضوية' : 'Organic Chemistry', instructor: language === 'ar' ? 'د. محمد أحمد' : 'Dr. Mohamed Ahmed', progress: 40 }
+  ]);
+
+  const [assignments] = React.useState<StudentAssignment[]>([
+    { id: '1', title: language === 'ar' ? 'واجب التفاضل' : 'Calculus Assignment', subject: language === 'ar' ? 'الرياضيات' : 'Mathematics', dueDate: '2024-01-20', status: 'pending' },
+    { id: '2', title: language === 'ar' ? 'تقرير الفيزياء' : 'Physics Report', subject: language === 'ar' ? 'الفيزياء' : 'Physics', dueDate: '2024-01-25', status: 'submitted' }
+  ]);
 
   const stats = [
     {
@@ -50,7 +35,7 @@ export const StudentDashboard: React.FC = () => {
     },
     {
       title: language === 'ar' ? 'الدورات المسجلة' : 'Enrolled Courses',
-      value: String(enrolledCourses.length),
+      value: String(studentCourses.length),
       icon: BookOpen,
       color: 'primary',
       trend: '+2'
@@ -175,31 +160,34 @@ export const StudentDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {enrolledCourses.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  {language === 'ar' ? 'لم تسجل في أي دورة بعد.' : 'You have not enrolled in any courses yet.'}
-                </div>
-              ) : (
-                enrolledCourses.map((course) => (
-                  <div key={course.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="font-tajawal font-semibold text-foreground mb-1">
-                          {course.title}
-                        </h4>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
+              {studentCourses.map((course) => (
+                <div key={course.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-tajawal font-semibold text-foreground mb-1">
+                        {course.title}
+                      </h4>
                       <p className="text-sm text-muted-foreground">
-                        {language === 'ar' ? 'دورة مسجلة' : 'Enrolled course'}
+                        {course.instructor} • {language === 'ar' ? 'التقدم' : 'Progress'}: {course.progress}%
                       </p>
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
-                        {language === 'ar' ? 'عرض' : 'View'}
-                      </Button>
                     </div>
                   </div>
-                ))
-              )}
+                  <div className="w-full bg-muted rounded-full h-2 mb-3">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all" 
+                      style={{ width: `${course.progress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {language === 'ar' ? 'دورة نشطة' : 'Active course'}
+                    </span>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
+                      {language === 'ar' ? 'متابعة' : 'Continue'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
               
               <Button className="btn-cultural w-full mt-4" onClick={() => navigate('/courses')}>
                 <BookOpen className="w-4 h-4 me-2" />
@@ -212,40 +200,38 @@ export const StudentDashboard: React.FC = () => {
             <CardHeader>
               <CardTitle className="font-tajawal text-xl text-secondary flex items-center">
                 <Award className="w-5 h-5 me-2" />
-                {language === 'ar' ? 'الواجبات المعيّنة' : 'Assigned Homeworks'}
+                {language === 'ar' ? 'الواجبات والمهام' : 'Assignments & Tasks'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {assignedHomeworks.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  {language === 'ar' ? 'لا توجد واجبات حالياً.' : 'No homeworks right now.'}
-                </div>
-              ) : (
-                assignedHomeworks.map((hw) => {
-                  const due = new Date(hw.dueAt);
-                  const sub = mySub(hw.id);
-                  const overdue = !sub && new Date() > due;
-                  return (
-                    <div key={hw.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-tajawal font-semibold text-foreground mb-1">
-                            {hw.title}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {language === 'ar' ? 'الاستحقاق: ' : 'Due: '} {due.toLocaleString()} · {sub ? (language === 'ar' ? 'تم التسليم' : 'Submitted') : overdue ? (language === 'ar' ? 'متأخر' : 'Overdue') : (language === 'ar' ? 'لم يُسلّم' : 'Not submitted')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end">
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate('/courses')}>
-                          {language === 'ar' ? 'تسليم الواجب' : 'Submit on Courses'}
-                        </Button>
-                      </div>
+              {assignments.map((assignment) => (
+                <div key={assignment.id} className="border border-border rounded-xl p-4 hover:shadow-soft transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-tajawal font-semibold text-foreground mb-1">
+                        {assignment.title}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {assignment.subject} • {language === 'ar' ? 'موعد التسليم:' : 'Due:'} {assignment.dueDate}
+                      </p>
                     </div>
-                  );
-                })
-              )}
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      assignment.status === 'submitted' ? 'bg-success/10 text-success' :
+                      assignment.status === 'graded' ? 'bg-info/10 text-info' :
+                      'bg-warning/10 text-warning'
+                    }`}>
+                      {assignment.status === 'submitted' ? (language === 'ar' ? 'مُسلّم' : 'Submitted') :
+                       assignment.status === 'graded' ? (language === 'ar' ? 'مُقيّم' : 'Graded') :
+                       (language === 'ar' ? 'معلق' : 'Pending')}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button size="sm" variant="outline" className="text-xs">
+                      {assignment.status === 'submitted' ? (language === 'ar' ? 'عرض التسليم' : 'View Submission') : (language === 'ar' ? 'تسليم' : 'Submit')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>

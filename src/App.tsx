@@ -14,6 +14,8 @@ import NotFound from "./pages/NotFound";
 import BuyPoints from "./pages/BuyPoints";
 import Profile from "./pages/Profile";
 import Courses from "./pages/Courses";
+import { Community } from "./pages/Community";
+import { Exams } from "./pages/Exams";
 
 const queryClient = new QueryClient();
 
@@ -75,22 +77,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/courses" element={<Courses />} />
-        <Route path="/exams" element={
-          <div>
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <div className="p-8 text-center">Exams - Coming Soon</div>
-            </main>
-          </div>
-        } />
-        <Route path="/community" element={
-          <div>
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <div className="p-8 text-center">Community - Coming Soon</div>
-            </main>
-          </div>
-        } />
+        <Route path="/exams" element={<Exams />} />
+        <Route path="/community" element={<Community />} />
         <Route path="/buy-points" element={<BuyPoints />} />
         <Route path="/profile" element={
           <ProtectedRoute>
